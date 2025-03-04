@@ -3,7 +3,7 @@ SHELL_PATH = /bin/ash
 SHELL = $(if $(wildcard $(SHELL_PATH)),/bin/ash,/bin/bash)
 
 run:
-	go run ./apis/services/sales/main.go | go run ./apis/services/tooling/logfmt/main.go
+	go run ./api/services/sales/main.go | go run ./api/tooling/logfmt/main.go
 
 # ==============================================================================
 # Define dependencies
@@ -64,9 +64,80 @@ dev-status-all:
 dev-status:
 	watch -n 2 kubectl get pods -o wide --all-namespaces
 
+# ------------------------------------------------------------------------------
+
+dev-load:
+	kind load docker-image $(SALES_IMAGE) --name $(KIND_CLUSTER)
+
+dev-apply:
+	kustomize build zarf/k8s/dev/sales | kubectl apply -f -
+	kubectl wait pods --namespace=$(NAMESPACE) --selector app=$(SALES_APP) --timeout=120s --for=condition=Ready
+
+dev-restart:
+	kubectl rollout restart deployment $(SALES_APP) --namespace=$(NAMESPACE)
+
+dev-run: build dev-up dev-load dev-apply
+
+dev-update: build dev-load dev-restart
+
+dev-update-apply: build dev-load dev-apply
+
+dev-logs:
+	kubectl logs --namespace=$(NAMESPACE) -l app=$(SALES_APP) --all-containers=true -f --tail=100 --max-log-requests=6 | go run api/tooling/logfmt/main.go -service=$(SALES_APP)
+
+# ------------------------------------------------------------------------------
+
+dev-describe-deployment:
+	kubectl describe deployment --namespace=$(NAMESPACE) $(SALES_APP)
+
+dev-describe-sales:
+	kubectl describe pod --namespace=$(NAMESPACE) -l app=$(SALES_APP)
+
 # ==============================================================================
 # Modules support
 
 tidy:
 	go mod tidy
 	go mod vendor
+
+#==============================================================================
+# Git Commands
+#==============================================================================
+
+# Git add all changes
+.PHONY: ga
+ga:
+	git add .
+
+# Git commit with message
+.PHONY: gc
+gc:
+	@read -p "Enter commit message: " msg; \
+	git commit -m "$$msg"
+
+# Git push to current branch
+.PHONY: gp
+gp:
+	git push origin $$(git branch --show-current)
+
+# Git status
+.PHONY: gs
+gs:
+	git status
+
+# Git pull from current branch
+.PHONY: gl
+gl:
+	git pull origin $$(git branch --show-current)
+
+# Git checkout new branch
+.PHONY: gb
+gb:
+	@read -p "Enter branch name: " branch; \
+	git checkout -b $$branch
+
+# Git checkout existing branch
+.PHONY: gco
+gco:
+	@read -p "Enter branch name: " branch; \
+	git checkout $$branch
