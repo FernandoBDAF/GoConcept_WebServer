@@ -14,6 +14,7 @@ import (
 
 	"github.com/ardanlabs/conf/v3"
 	"github.com/fernandobdaf/GoConcept_WebServer/app/sdk/debug"
+	"github.com/fernandobdaf/GoConcept_WebServer/app/sdk/mux"
 	"github.com/fernandobdaf/GoConcept_WebServer/foundation/logger"
 )
 
@@ -116,10 +117,10 @@ func run(ctx context.Context, log *logger.Logger) error {
 
 	shutdown := make(chan os.Signal, 1)
 	signal.Notify(shutdown, syscall.SIGINT, syscall.SIGTERM)
-	
+
 	api := http.Server{
 		Addr:         cfg.Web.APIHost,
-		Handler:      nil,
+		Handler:      mux.WebAPI(),
 		ReadTimeout:  cfg.Web.ReadTimeout,
 		WriteTimeout: cfg.Web.WriteTimeout,
 		IdleTimeout:  cfg.Web.IdleTimeout,
