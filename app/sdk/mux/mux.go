@@ -3,26 +3,16 @@
 package mux
 
 import (
-	"encoding/json"
 	"net/http"
+
+	"github.com/fernandobdaf/GoConcept_WebServer/app/domain/checkapp"
 )
 
 // WebAPI constructs a http.Handler with all application routes bound.
 func WebAPI() http.Handler {
 	mux := http.NewServeMux()
 
-	h := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		status := struct {
-			Status string `json:"status"`
-		}{
-			Status: "OK",
-		}
-
-		json.NewEncoder(w).Encode(status)
-	})
-
-	mux.Handle("GET /test", h)
-
+	checkapp.Routes(mux)
 
 	return mux
 }
