@@ -1,12 +1,10 @@
 package checkapp
 
-import (
-	"net/http"
+import "github.com/fernandobdaf/GoConcept_WebServer/foundation/web"
 
-	// "github.com/fernandobdaf/GoConcept_WebServer/foundation/logger"
-	// "github.com/fernandobdaf/GoConcept_WebServer/foundation/web"
-	// "github.com/jmoiron/sqlx"
-)
+// "github.com/fernandobdaf/GoConcept_WebServer/foundation/logger"
+// "github.com/fernandobdaf/GoConcept_WebServer/foundation/web"
+// "github.com/jmoiron/sqlx"
 
 // Config contains all the mandatory systems required by handlers.
 type Config struct {
@@ -16,12 +14,12 @@ type Config struct {
 }
 
 // Routes adds specific routes for this group.
-func Routes(app *http.ServeMux) {
+func Routes(app *web.App) {
 	// const version = "v1"
 
 	// api := newApp(cfg.Build, cfg.Log, cfg.DB)
 	api := newApp()
 
-	app.HandleFunc("/readiness", api.readiness)
-	app.HandleFunc("/liveness", api.liveness)
+	app.HandlerFunc("/readiness", api.readiness)
+	app.HandlerFunc("/liveness", api.liveness)
 }

@@ -3,14 +3,15 @@
 package mux
 
 import (
-	"net/http"
+	"os"
 
 	"github.com/fernandobdaf/GoConcept_WebServer/app/domain/checkapp"
+	"github.com/fernandobdaf/GoConcept_WebServer/foundation/web"
 )
 
 // WebAPI constructs a http.Handler with all application routes bound.
-func WebAPI() http.Handler {
-	mux := http.NewServeMux()
+func WebAPI(shutdown chan os.Signal) *web.App {
+	mux := web.NewApp(shutdown)
 
 	checkapp.Routes(mux)
 
