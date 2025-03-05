@@ -5,6 +5,12 @@ SHELL = $(if $(wildcard $(SHELL_PATH)),/bin/ash,/bin/bash)
 run:
 	go run ./api/services/sales/main.go | go run ./api/tooling/logfmt/main.go
 
+help:
+	go run ./api/services/sales/main.go --help
+
+version:
+	go run ./api/services/sales/main.go --version
+
 # ==============================================================================
 # Define dependencies
 
@@ -99,45 +105,3 @@ dev-describe-sales:
 tidy:
 	go mod tidy
 	go mod vendor
-
-#==============================================================================
-# Git Commands
-#==============================================================================
-
-# Git add all changes
-.PHONY: ga
-ga:
-	git add .
-
-# Git commit with message
-.PHONY: gc
-gc:
-	@read -p "Enter commit message: " msg; \
-	git commit -m "$$msg"
-
-# Git push to current branch
-.PHONY: gp
-gp:
-	git push origin $$(git branch --show-current)
-
-# Git status
-.PHONY: gs
-gs:
-	git status
-
-# Git pull from current branch
-.PHONY: gl
-gl:
-	git pull origin $$(git branch --show-current)
-
-# Git checkout new branch
-.PHONY: gb
-gb:
-	@read -p "Enter branch name: " branch; \
-	git checkout -b $$branch
-
-# Git checkout existing branch
-.PHONY: gco
-gco:
-	@read -p "Enter branch name: " branch; \
-	git checkout $$branch
