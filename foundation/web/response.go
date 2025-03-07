@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"net/http"
 
-	// "go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/attribute"
 )
 
 // NoResponse tells the Respond function to not respond to the request. In these
@@ -58,8 +58,8 @@ func Respond(ctx context.Context, w http.ResponseWriter, resp Encoder) error {
 		}
 	}
 
-	// _, span := addSpan(ctx, "web.send.response", attribute.Int("status", statusCode))
-	// defer span.End()
+	_, span := addSpan(ctx, "web.send.response", attribute.Int("status", statusCode))
+	defer span.End()
 
 	if statusCode == http.StatusNoContent {
 		w.WriteHeader(statusCode)

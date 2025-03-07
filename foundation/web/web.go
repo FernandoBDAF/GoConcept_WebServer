@@ -7,6 +7,10 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/propagation"
+	"go.opentelemetry.io/otel/trace"
 )
 
 // Encoder defines behavior that can encode a data model and provide
@@ -38,14 +42,16 @@ type HandlerFunc func(ctx context.Context, w http.ResponseWriter, r *http.Reques
 // object for each of our http handlers. Feel free to add any configuration
 // data/logic on this App struct.
 type App struct {
+	tracer trace.Tracer
 	*http.ServeMux
-	shutdown chan os.Signal
 	mw       []MidFunc
+	shutdown chan os.Signal
 }
 
 // NewApp creates an App value that handle a set of routes for the application.
-func NewApp(shutdown chan os.Signal, mw ...MidFunc) *App {
+func NewApp(tracer trace.Tracer, shutdown chan os.Signal, mw ...MidFunc) *App {
 	return &App{
+		tracer:   tracer,
 		ServeMux: http.NewServeMux(),
 		shutdown: shutdown,
 		mw:       mw,
@@ -59,10 +65,12 @@ func (a *App) HandlerFunc(pattern string, handlerFunc HandlerFunc, mw ...MidFunc
 	handlerFunc = wrapMiddleware(a.mw, handlerFunc)
 
 	h := func(w http.ResponseWriter, r *http.Request) {
+		ctx := setTracer(r.Context(), a.tracer)
+		ctx = setWriter(ctx, w)
 
-		// PUT ANY CODE WE WANT TO RUN BEFORE THE HANDLER HERE
+		otel.GetTextMapPropagator().Inject(ctx, propagation.HeaderCarrier(w.Header()))
 
-		if encode := handlerFunc(r.Context(), w, r); encode.Err != nil {
+		if encode := handlerFunc(ctx, w, r); encode.Err != nil {
 			// ERROR HANDLING HERE
 			fmt.Println(encode.Err)
 			return

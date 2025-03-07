@@ -16,6 +16,7 @@ import (
 	"github.com/fernandobdaf/GoConcept_WebServer/app/sdk/debug"
 	"github.com/fernandobdaf/GoConcept_WebServer/app/sdk/mux"
 	"github.com/fernandobdaf/GoConcept_WebServer/foundation/logger"
+	"github.com/fernandobdaf/GoConcept_WebServer/foundation/otel"
 )
 
 var build = "develop"
@@ -30,7 +31,7 @@ func main() {
 	}
 
 	traceIDFn := func(ctx context.Context) string {
-		return "" //otel.GetTraceID(ctx)
+		return otel.GetTraceID(ctx)
 	}
 
 	log = logger.NewWithEvents(os.Stdout, logger.LevelInfo, "SALES", traceIDFn, events)
@@ -67,6 +68,14 @@ func run(ctx context.Context, log *logger.Logger) error {
 			// CORSAllowedOrigins []string      `conf:"default:*, noprint"` noprint avoids this to be printed
 			// CORSAllowedOrigins []string      `conf:"default:*, mask"` prints the value as "********"
 		}
+		Tempo struct {
+			Host        string  `conf:"default:tempo:4317"`
+			ServiceName string  `conf:"default:sales"`
+			Probability float64 `conf:"default:0.05"`
+			// Shouldn't use a high Probability value in non-developer systems.
+			// 0.05 should be enough for most systems. Some might want to have
+			// this even lower.
+		}
 	}{
 		Version: conf.Version{
 			Build: build,
@@ -99,10 +108,33 @@ func run(ctx context.Context, log *logger.Logger) error {
 	expvar.NewString("build").Set(cfg.Build)
 
 	// -------------------------------------------------------------------------
+	// Start Tracing Support
+
+	log.Info(ctx, "startup", "status", "initializing tracing support")
+
+	traceProvider, teardown, err := otel.InitTracing(log, otel.Config{
+		ServiceName: cfg.Tempo.ServiceName,
+		Host:        cfg.Tempo.Host,
+		ExcludedRoutes: map[string]struct{}{
+			"/v1/liveness":  {},
+			"/v1/readiness": {},
+		},
+		Probability: cfg.Tempo.Probability,
+	})
+	if err != nil {
+		return fmt.Errorf("starting tracing: %w", err)
+	}
+
+	defer teardown(context.Background())
+
+	tracer := traceProvider.Tracer(cfg.Tempo.ServiceName)
+
+	// -------------------------------------------------------------------------
 	// Start Debug Service
 
-	// With this, we can access the debug service at http://localhost:3010/debug/pprof
-	go func() {
+		
+	go func() { 
+		// With this, we can access the debug service at http://localhost:3010/debug/pprof
 		log.Info(ctx, "startup", "status", "debug v1 router started", "host", cfg.Web.DebugHost)
 
 		if err := http.ListenAndServe(cfg.Web.DebugHost, debug.Mux()); err != nil {
@@ -118,9 +150,26 @@ func run(ctx context.Context, log *logger.Logger) error {
 	shutdown := make(chan os.Signal, 1)
 	signal.Notify(shutdown, syscall.SIGINT, syscall.SIGTERM)
 
+	cfgMux := mux.Config{
+		Build:  build,
+		Log:    log,
+		// DB:     db,
+		Tracer: tracer,
+		// SalesConfig: mux.SalesConfig{
+		// 	AuthClient: authClient,
+		// },
+	}
+
+	webAPI := mux.WebAPI(cfgMux,
+		shutdown,
+		// buildRoutes(),
+		// mux.WithCORS(cfg.Web.CORSAllowedOrigins),
+		// mux.WithFileServer(false, static, "static", "/"),
+	)
+
 	api := http.Server{
 		Addr:         cfg.Web.APIHost,
-		Handler:      mux.WebAPI(shutdown, log),
+		Handler:      webAPI,
 		ReadTimeout:  cfg.Web.ReadTimeout,
 		WriteTimeout: cfg.Web.WriteTimeout,
 		IdleTimeout:  cfg.Web.IdleTimeout,
