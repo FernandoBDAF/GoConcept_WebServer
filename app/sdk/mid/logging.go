@@ -13,7 +13,7 @@ import (
 // Logger writes information about the request to the logs.
 func Logger(log *logger.Logger) web.MidFunc {
 	m := func(next web.HandlerFunc) web.HandlerFunc {
-		h := func(ctx context.Context, w http.ResponseWriter, r *http.Request) web.MockEncoder {
+		h := func(ctx context.Context, r *http.Request) web.Encoder {
 			now := time.Now()
 
 			path := r.URL.Path
@@ -23,7 +23,7 @@ func Logger(log *logger.Logger) web.MidFunc {
 
 			log.Info(ctx, "request started", "method", r.Method, "path", path, "remoteaddr", r.RemoteAddr)
 
-			resp := next(ctx, w, r)
+			resp := next(ctx, r)
 			// err := isError(resp)
 
 			var statusCode = http.StatusOK

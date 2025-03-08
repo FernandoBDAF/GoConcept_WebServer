@@ -17,6 +17,9 @@ curl-live:
 curl-ready:
 	curl -il -X GET http://localhost:3000/readiness
 
+curl-test-error:
+	curl -il -X GET http://localhost:3000/test-error
+
 # ==============================================================================
 # Define dependencies
 

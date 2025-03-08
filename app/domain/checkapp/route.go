@@ -1,6 +1,10 @@
 package checkapp
 
-import "github.com/fernandobdaf/GoConcept_WebServer/foundation/web"
+import (
+	"net/http"
+
+	"github.com/fernandobdaf/GoConcept_WebServer/foundation/web"
+)
 
 // "github.com/fernandobdaf/GoConcept_WebServer/foundation/logger"
 // "github.com/fernandobdaf/GoConcept_WebServer/foundation/web"
@@ -20,6 +24,7 @@ func Routes(app *web.App) {
 	// api := newApp(cfg.Build, cfg.Log, cfg.DB)
 	api := newApp()
 
-	app.HandlerFunc("/readiness", api.readiness)
-	app.HandlerFunc("/liveness", api.liveness)
+	app.HandlerFunc(http.MethodGet, "", "/readiness", api.readiness)
+	app.HandlerFunc(http.MethodGet, "", "/liveness", api.liveness)
+	app.HandlerFunc(http.MethodGet, "", "/test-error", api.testError)
 }

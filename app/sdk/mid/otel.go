@@ -12,10 +12,10 @@ import (
 // Otel starts the otel tracing and stores the trace id in the context.
 func Otel(tracer trace.Tracer) web.MidFunc {
 	m := func(next web.HandlerFunc) web.HandlerFunc {
-		h := func(ctx context.Context, w http.ResponseWriter, r *http.Request) web.MockEncoder {
+		h := func(ctx context.Context, r *http.Request) web.Encoder {
 			ctx = otel.InjectTracing(ctx, tracer)
 
-			return next(ctx, w, r)
+			return next(ctx, r)	
 		}
 
 		return h

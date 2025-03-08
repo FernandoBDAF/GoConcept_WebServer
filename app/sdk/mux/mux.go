@@ -3,7 +3,8 @@
 package mux
 
 import (
-	"os"
+	"context"
+	"net/http"
 
 	"github.com/fernandobdaf/GoConcept_WebServer/app/domain/checkapp"
 	"github.com/fernandobdaf/GoConcept_WebServer/app/sdk/mid"
@@ -23,10 +24,42 @@ type Config struct {
 }
 
 // WebAPI constructs a http.Handler with all application routes bound.
-func WebAPI(config Config, shutdown chan os.Signal) *web.App {
-	mux := web.NewApp(config.Tracer, shutdown, mid.Otel(config.Tracer), mid.Logger(config.Log))
+// func WebAPI(cfg Config, routeAdder RouteAdder, options ...func(opts *Options)) http.Handler {
+func WebAPI(cfg Config) http.Handler {
+	logger := func(ctx context.Context, msg string, args ...any) {
+		cfg.Log.Info(ctx, msg, args...)
+	}
 
-	checkapp.Routes(mux)
+	app := web.NewApp(
+		logger,
+		cfg.Tracer,
+		mid.Otel(cfg.Tracer),
+		mid.Logger(cfg.Log),
+		mid.Errors(cfg.Log),
+		// mid.Metrics(),
+		// mid.Panics(),
+	)
 
-	return mux
+	checkapp.Routes(app)
+
+	// var opts Options
+	// for _, option := range options {
+	// 	option(&opts)
+	// }
+
+	// if len(opts.corsOrigin) > 0 {
+	// 	app.EnableCORS(opts.corsOrigin)
+	// }
+
+	// routeAdder.Add(app, cfg)
+
+	// for _, site := range opts.sites {
+	// 	if site.react {
+	// 		app.FileServerReact(site.static, site.staticDir, site.staticPath)
+	// 	} else {
+	// 		app.FileServer(site.static, site.staticDir, site.staticPath)
+	// 	}
+	// }
+
+	return app
 }

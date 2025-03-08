@@ -151,8 +151,8 @@ func run(ctx context.Context, log *logger.Logger) error {
 	signal.Notify(shutdown, syscall.SIGINT, syscall.SIGTERM)
 
 	cfgMux := mux.Config{
-		Build:  build,
-		Log:    log,
+		Build: build,
+		Log:   log,
 		// DB:     db,
 		Tracer: tracer,
 		// SalesConfig: mux.SalesConfig{
@@ -160,12 +160,9 @@ func run(ctx context.Context, log *logger.Logger) error {
 		// },
 	}
 
-	webAPI := mux.WebAPI(cfgMux,
-		shutdown,
-		// buildRoutes(),
-		// mux.WithCORS(cfg.Web.CORSAllowedOrigins),
-		// mux.WithFileServer(false, static, "static", "/"),
-	)
+	webAPI := mux.WebAPI(cfgMux) // buildRoutes(),
+	// mux.WithCORS(cfg.Web.CORSAllowedOrigins),
+	// mux.WithFileServer(false, static, "static", "/"),
 
 	api := http.Server{
 		Addr:         cfg.Web.APIHost,
