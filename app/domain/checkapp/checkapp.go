@@ -7,8 +7,8 @@ import (
 	"math/rand"
 	"net/http"
 
-	"github.com/fernandobdaf/GoConcept_WebServer/foundation/web"
 	"github.com/fernandobdaf/GoConcept_WebServer/app/sdk/errs"
+	"github.com/fernandobdaf/GoConcept_WebServer/foundation/web"
 	// "github.com/fernandobdaf/GoConcept_WebServer/app/sdk/errs"
 	// "github.com/fernandobdaf/GoConcept_WebServer/business/sdk/sqldb"
 	// "github.com/fernandobdaf/GoConcept_WebServer/foundation/logger"
@@ -49,7 +49,6 @@ func (a *app) readiness(ctx context.Context, r *http.Request) web.Encoder {
 	}
 	// return json.NewEncoder(w).Encode(status)
 
-
 	return status
 }
 
@@ -87,7 +86,19 @@ func (a *app) liveness(ctx context.Context, r *http.Request) web.Encoder {
 func (a *app) testError(ctx context.Context, r *http.Request) web.Encoder {
 	if n := rand.Intn(10); n%2 == 0 {
 		return errs.Newf(errs.FailedPrecondition, "test error")
-		}
+	}
+
+	status := Info{
+		Status: "OK",
+	}
+
+	return status
+}
+
+func (a *app) testPanic(ctx context.Context, r *http.Request) web.Encoder {
+	if n := rand.Intn(10); n%2 == 0 {
+		panic("THIS IS A PANIC TEST!!!")
+	}
 
 	status := Info{
 		Status: "OK",

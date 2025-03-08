@@ -20,6 +20,9 @@ curl-ready:
 curl-test-error:
 	curl -il -X GET http://localhost:3000/test-error
 
+curl-test-panic:
+	curl -il -X GET http://localhost:3000/test-panic
+
 # ==============================================================================
 # Define dependencies
 

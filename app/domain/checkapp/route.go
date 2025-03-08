@@ -27,4 +27,5 @@ func Routes(app *web.App) {
 	app.HandlerFunc(http.MethodGet, "", "/readiness", api.readiness)
 	app.HandlerFunc(http.MethodGet, "", "/liveness", api.liveness)
 	app.HandlerFunc(http.MethodGet, "", "/test-error", api.testError)
+	app.HandlerFunc(http.MethodGet, "", "/test-panic", api.testPanic)
 }

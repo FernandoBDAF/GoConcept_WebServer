@@ -37,7 +37,7 @@ func WebAPI(cfg Config) http.Handler {
 		mid.Logger(cfg.Log),
 		mid.Errors(cfg.Log),
 		// mid.Metrics(),
-		// mid.Panics(),
+		mid.Panics(),
 	)
 
 	checkapp.Routes(app)
