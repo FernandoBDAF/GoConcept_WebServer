@@ -81,6 +81,30 @@ func (a *App) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	a.otmux.ServeHTTP(w, r)
 }
 
+// HandlerFuncNoMid sets a handler function for a given HTTP method and path
+// pair to the application server mux. Does not include the application
+// middleware or OTEL tracing.
+func (a *App) HandlerFuncNoMid(method string, group string, path string, handlerFunc HandlerFunc) {
+	h := func(w http.ResponseWriter, r *http.Request) {
+		ctx := setWriter(r.Context(), w)
+
+		resp := handlerFunc(ctx, r)
+
+		if err := Respond(ctx, w, resp); err != nil {
+			a.log(ctx, "web-respond", "ERROR", err)
+			return
+		}
+	}
+
+	finalPath := path
+	if group != "" {
+		finalPath = "/" + group + path
+	}
+	finalPath = fmt.Sprintf("%s %s", method, finalPath)
+
+	a.mux.HandleFunc(finalPath, h)
+}
+
 // HandlerFunc sets a handler function for a given HTTP method and path pair
 // to the application server mux.
 func (a *App) HandlerFunc(method string, group string, path string, handlerFunc HandlerFunc, mw ...MidFunc) {

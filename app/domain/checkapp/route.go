@@ -24,8 +24,8 @@ func Routes(app *web.App) {
 	// api := newApp(cfg.Build, cfg.Log, cfg.DB)
 	api := newApp()
 
-	app.HandlerFunc(http.MethodGet, "", "/readiness", api.readiness)
-	app.HandlerFunc(http.MethodGet, "", "/liveness", api.liveness)
+	app.HandlerFuncNoMid(http.MethodGet, "", "/readiness", api.readiness)
+	app.HandlerFuncNoMid(http.MethodGet, "", "/liveness", api.liveness)
 	app.HandlerFunc(http.MethodGet, "", "/test-error", api.testError)
 	app.HandlerFunc(http.MethodGet, "", "/test-panic", api.testPanic)
 }
