@@ -6,7 +6,7 @@ import (
 	"runtime/debug"
 
 	"github.com/fernandobdaf/GoConcept_WebServer/app/sdk/errs"
-	// "github.com/fernandobdaf/GoConcept_WebServer/app/sdk/metrics"
+	"github.com/fernandobdaf/GoConcept_WebServer/app/sdk/metrics"
 	"github.com/fernandobdaf/GoConcept_WebServer/foundation/web"
 )
 
@@ -23,7 +23,7 @@ func Panics() web.MidFunc {
 					trace := debug.Stack()
 					resp = errs.Newf(errs.InternalOnlyLog, "PANIC [%v] TRACE[%s]", rec, string(trace))
 
-					// metrics.AddPanics(ctx)
+					metrics.AddPanics(ctx)
 				}
 			}()
 

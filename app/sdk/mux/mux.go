@@ -36,7 +36,7 @@ func WebAPI(cfg Config) http.Handler {
 		mid.Otel(cfg.Tracer),
 		mid.Logger(cfg.Log),
 		mid.Errors(cfg.Log),
-		// mid.Metrics(),
+		mid.Metrics(),
 		mid.Panics(),
 	)
 
