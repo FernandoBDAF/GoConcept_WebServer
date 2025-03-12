@@ -24,7 +24,6 @@ func (NoResponse) Encode() ([]byte, string, error) {
 }
 
 // =============================================================================
-
 type httpStatus interface {
 	HTTPStatus() int
 }

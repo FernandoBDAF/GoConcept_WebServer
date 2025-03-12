@@ -2,29 +2,37 @@
 package main
 
 import (
+	"bytes"
+	"context"
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/x509"
+	_ "embed"
 	"encoding/pem"
+	"errors"
 	"fmt"
 	"log"
 	"os"
 	"time"
 
 	"github.com/golang-jwt/jwt/v4"
+	"github.com/open-policy-agent/opa/v1/rego"
 )
 
 func main() {
-	err := GenKey()
-	if err != nil {
-		log.Fatalf("generating key: %s", err)
-	}
+	// err := GenKey()
+	// if err != nil {
+	// 	log.Fatalf("generating key: %s", err)
+	// }
 
-	err = GenToken()
+	err := GenToken()
 	if err != nil {
 		log.Fatalf("generating token: %s", err)
 	}
 }
+
+//go:embed rego/authentication.rego
+var opaAuthentication string
 
 // GenToken generates a JWT for the specified user.
 func GenToken() error {
@@ -93,6 +101,46 @@ func GenToken() error {
 		return fmt.Errorf("encoding to public file: %w", err)
 	}
 
+	var b bytes.Buffer
+	if err := pem.Encode(&b, &publicBlock); err != nil {
+		return fmt.Errorf("encoding to public file: %w", err)
+	}
+
+	// --------------------------------------------------------------------------
+
+	query := fmt.Sprintf("x = data.%s.%s", "ardan.rego", "auth")
+	ctx := context.Background()
+
+	q, err := rego.New(
+		rego.Query(query),
+		rego.Module("policy.rego", opaAuthentication),
+	).PrepareForEval(ctx)
+	if err != nil {
+		return err
+	}
+
+	input := map[string]any{
+		"Key":   b.String(),
+		"Token": str,
+		"ISS":   "service project",
+	}
+
+	results, err := q.Eval(ctx, rego.EvalInput(input))
+	if err != nil {
+		return fmt.Errorf("query: %w", err)
+	}
+
+	if len(results) == 0 {
+		return errors.New("no results")
+	}
+
+	result, ok := results[0].Bindings["x"].(bool)
+	if !ok || !result {
+		return fmt.Errorf("bindings results[%v] ok[%v]", results, ok)
+	}
+
+	fmt.Println("token is valid")
+
 	return nil
 }
 
@@ -148,5 +196,6 @@ func GenKey() error {
 	}
 
 	fmt.Println("private and public key files generated")
+
 	return nil
 }
