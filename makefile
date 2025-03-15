@@ -39,6 +39,19 @@ curl-test-panic:
 genKeys:
 	go run ./api/tooling/admin/main.go
 
+# admin token (paste on terminal to register as an environment variable)
+# export TOKEN=eyJhbGciOiJSUzI1NiIsImtpZCI6IjU0YmIyMTY1LTcxZTEtNDFhNi1hZjNlLTdkYTRhMGUxZTJjMSIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzZXJ2aWNlIHByb2plY3QiLCJzdWIiOiJiZGVhZjE3Yy05MDc0LTRhZmUtOWJlMS1iNDU3YjJiOTU0MTQiLCJleHAiOjE3NzM1NTI5NDcsImlhdCI6MTc0MjAxNjk0Nywicm9sZXMiOlsiQURNSU4iXX0.ZMfzXzmxSVEm3xR25hvL2VMjW9U_23L0mU6PnpPLK8ST88MPIfWEmRnvmyNJ62JcbgjYKq3s1uMQGd58v0gLvw-KkvcY6UMdE9XJ-O07_cAo8E1hWB5zkNA4uWj8UU3KNAE2zMPzEwHxpar_PMRwJHRpxot41yXk8_qG6M1nfrMTyY2P-rQP-0aySbH_3Zh6TJ7zSGde35lGPDpdAFTo9m-SUoXbmSeV2iFMZShK8fTfRnsG5ciPIFqYHWDpmSflPSZEkpU6pecvYPWM20TaFrDFJVPQ2WOGYdO7T3DM53A1irS0BS3iZul_CBPGurvpBsdMaUANDts1563HL54aNQ
+
+# user token
+# export TOKEN=eyJhbGciOiJSUzI1NiIsImtpZCI6IjU0YmIyMTY1LTcxZTEtNDFhNi1hZjNlLTdkYTRhMGUxZTJjMSIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzZXJ2aWNlIHByb2plY3QiLCJzdWIiOiJiZGVhZjE3Yy05MDc0LTRhZmUtOWJlMS1iNDU3YjJiOTU0MTQiLCJleHAiOjE3NzM1NTMwNDAsImlhdCI6MTc0MjAxNzA0MCwicm9sZXMiOlsiVVNFUiJdfQ.rj05gkPsPVe7ejQz0lnFCm1Yy-8MFETw3vCcvsIxcMFL6skZgizc_DC3Ii9Qy2pyUj4TN-GvGItmBqrwJ7h4lQD-NwqOo9dZAOzmm6qNxXvLqzBT_0HeTwPD1flnCciZN0U-5J8i9iEMxreE6Wo0wTajk46hNBVx3JyoZTORzqasIZPRcAzMvFweqdftGSBnE-GyAA-72Ggh42Gzi6-GXmUpOTpRPzfECZBhWvp0gq5dquRTu09Am5ulGxj02fm30Au6qU2HoBft0oLStDdrqHze7ujpBPz_jeGeLooOpXHYamVzNjaA5PpyjzJmDs-KNLkvCq7Hy1IJRkb84cLJoQ
+
+curl-auth:
+	curl -i \
+	-H "Authorization: Bearer ${TOKEN}" "http://localhost:3000/test-auth"
+
+
+
+
 # ==============================================================================
 # Define dependencies
 

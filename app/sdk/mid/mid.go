@@ -37,9 +37,9 @@ const (
 	trKey
 )
 
-// func setClaims(ctx context.Context, claims auth.Claims) context.Context {
-// 	return context.WithValue(ctx, claimKey, claims)
-// }
+func setClaims(ctx context.Context, claims auth.Claims) context.Context {
+	return context.WithValue(ctx, claimKey, claims)
+}
 
 // GetClaims returns the claims from the context.
 func GetClaims(ctx context.Context) auth.Claims {
@@ -50,9 +50,9 @@ func GetClaims(ctx context.Context) auth.Claims {
 	return v
 }
 
-// func setUserID(ctx context.Context, userID uuid.UUID) context.Context {
-// 	return context.WithValue(ctx, userIDKey, userID)
-// }
+func setUserID(ctx context.Context, userID uuid.UUID) context.Context {
+	return context.WithValue(ctx, userIDKey, userID)
+}
 
 // GetUserID returns the user id from the context.
 func GetUserID(ctx context.Context) (uuid.UUID, error) {

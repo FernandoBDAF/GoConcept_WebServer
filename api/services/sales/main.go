@@ -13,8 +13,10 @@ import (
 	"time"
 
 	"github.com/ardanlabs/conf/v3"
+	"github.com/fernandobdaf/GoConcept_WebServer/app/sdk/auth"
 	"github.com/fernandobdaf/GoConcept_WebServer/app/sdk/debug"
 	"github.com/fernandobdaf/GoConcept_WebServer/app/sdk/mux"
+	"github.com/fernandobdaf/GoConcept_WebServer/foundation/keystore"
 	"github.com/fernandobdaf/GoConcept_WebServer/foundation/logger"
 	"github.com/fernandobdaf/GoConcept_WebServer/foundation/otel"
 )
@@ -68,6 +70,13 @@ func run(ctx context.Context, log *logger.Logger) error {
 			// CORSAllowedOrigins []string      `conf:"default:*, noprint"` noprint avoids this to be printed
 			// CORSAllowedOrigins []string      `conf:"default:*, mask"` prints the value as "********"
 		}
+		// move to auth service
+		Auth struct {
+			KeysEnvVar string
+			KeysFolder string `conf:"default:zarf/keys/"`
+			ActiveKID  string `conf:"default:54bb2165-71e1-41a6-af3e-7da4a0e1e2c1"`
+			Issuer     string `conf:"default:service project"`
+		}
 		Tempo struct {
 			Host        string  `conf:"default:tempo:4317"`
 			ServiceName string  `conf:"default:sales"`
@@ -108,6 +117,44 @@ func run(ctx context.Context, log *logger.Logger) error {
 	expvar.NewString("build").Set(cfg.Build)
 
 	// -------------------------------------------------------------------------
+	// Initialize authentication support (move to auth service)
+
+	log.Info(ctx, "startup", "status", "initializing authentication support")
+
+	// Check the enviornment first to see if a key is being provided. Then
+	// load any private keys files from disk. We can assume some system like
+	// Vault has created these files already. How that happens is not our
+	// concern.
+
+	ks := keystore.New()
+
+	n1, err := ks.LoadByJSON(cfg.Auth.KeysEnvVar)
+	if err != nil {
+		return fmt.Errorf("loading keys by env: %w", err)
+	}
+
+	n2, err := ks.LoadByFileSystem(os.DirFS(cfg.Auth.KeysFolder))
+	if err != nil {
+		return fmt.Errorf("loading keys by fs: %w", err)
+	}
+
+	if n1+n2 == 0 {
+		return fmt.Errorf("no keys exist: %w", err)
+	}
+
+	authCfg := auth.Config{
+		Log:       log,
+		// DB:        db,
+		KeyLookup: ks,
+		Issuer:    cfg.Auth.Issuer,
+	}
+
+	ath, err := auth.New(authCfg)
+	if err != nil {
+		return fmt.Errorf("constructing auth: %w", err)
+	}
+
+	// -------------------------------------------------------------------------
 	// Start Tracing Support
 
 	log.Info(ctx, "startup", "status", "initializing tracing support")
@@ -132,8 +179,7 @@ func run(ctx context.Context, log *logger.Logger) error {
 	// -------------------------------------------------------------------------
 	// Start Debug Service
 
-		
-	go func() { 
+	go func() {
 		// With this, we can access the debug service at http://localhost:3010/debug/pprof
 		log.Info(ctx, "startup", "status", "debug v1 router started", "host", cfg.Web.DebugHost)
 
@@ -155,6 +201,7 @@ func run(ctx context.Context, log *logger.Logger) error {
 		Log:   log,
 		// DB:     db,
 		Tracer: tracer,
+		Auth:   ath, // remove this when move to auth service
 		// SalesConfig: mux.SalesConfig{
 		// 	AuthClient: authClient,
 		// },

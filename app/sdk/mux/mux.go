@@ -7,6 +7,7 @@ import (
 	"net/http"
 
 	"github.com/fernandobdaf/GoConcept_WebServer/app/domain/checkapp"
+	"github.com/fernandobdaf/GoConcept_WebServer/app/sdk/auth"
 	"github.com/fernandobdaf/GoConcept_WebServer/app/sdk/mid"
 	"github.com/fernandobdaf/GoConcept_WebServer/foundation/logger"
 	"github.com/fernandobdaf/GoConcept_WebServer/foundation/web"
@@ -21,6 +22,7 @@ type Config struct {
 	Tracer trace.Tracer
 	// SalesConfig
 	// AuthConfig
+	Auth *auth.Auth
 }
 
 // WebAPI constructs a http.Handler with all application routes bound.
@@ -40,7 +42,7 @@ func WebAPI(cfg Config) http.Handler {
 		mid.Panics(),
 	)
 
-	checkapp.Routes(app)
+	checkapp.Routes(app, cfg.Auth)
 
 	// var opts Options
 	// for _, option := range options {
