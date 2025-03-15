@@ -10,6 +10,7 @@ import (
 	// "github.com/fernandobdaf/GoConcept_WebServer/business/domain/productbus"
 	// "github.com/fernandobdaf/GoConcept_WebServer/business/domain/userbus"
 	// "github.com/fernandobdaf/GoConcept_WebServer/business/sdk/sqldb"
+	"github.com/fernandobdaf/GoConcept_WebServer/app/sdk/auth"
 	"github.com/fernandobdaf/GoConcept_WebServer/foundation/web"
 	"github.com/google/uuid"
 )
@@ -41,17 +42,17 @@ const (
 // }
 
 // GetClaims returns the claims from the context.
-// func GetClaims(ctx context.Context) auth.Claims {
-// 	v, ok := ctx.Value(claimKey).(auth.Claims)
-// 	if !ok {
-// 		return auth.Claims{}
-// 	}
-// 	return v
-// }
-
-func setUserID(ctx context.Context, userID uuid.UUID) context.Context {
-	return context.WithValue(ctx, userIDKey, userID)
+func GetClaims(ctx context.Context) auth.Claims {
+	v, ok := ctx.Value(claimKey).(auth.Claims)
+	if !ok {
+		return auth.Claims{}
+	}
+	return v
 }
+
+// func setUserID(ctx context.Context, userID uuid.UUID) context.Context {
+// 	return context.WithValue(ctx, userIDKey, userID)
+// }
 
 // GetUserID returns the user id from the context.
 func GetUserID(ctx context.Context) (uuid.UUID, error) {
