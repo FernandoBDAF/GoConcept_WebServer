@@ -4,10 +4,9 @@ import (
 	"context"
 	"errors"
 	"net/http"
-	// "time"
+	"time"
 
-	"github.com/fernandobdaf/GoConcept_WebServer/app/sdk/auth"
-	// "github.com/fernandobdaf/GoConcept_WebServer/app/sdk/authclient"
+	"github.com/fernandobdaf/GoConcept_WebServer/app/sdk/authclient"
 	"github.com/fernandobdaf/GoConcept_WebServer/app/sdk/errs"
 	// "github.com/fernandobdaf/GoConcept_WebServer/business/domain/homebus"
 	// "github.com/fernandobdaf/GoConcept_WebServer/business/domain/productbus"
@@ -20,8 +19,7 @@ import (
 var ErrInvalidID = errors.New("ID is not in its proper form")
 
 // Authorize validates authorization via the auth service.
-// func Authorize(client *authclient.Client, rule string) web.MidFunc {
-func Authorize(a *auth.Auth, rule string) web.MidFunc {
+func Authorize(client *authclient.Client, rule string) web.MidFunc {
 	m := func(next web.HandlerFunc) web.HandlerFunc {
 		h := func(ctx context.Context, r *http.Request) web.Encoder {
 			userID, err := GetUserID(ctx)
@@ -29,21 +27,16 @@ func Authorize(a *auth.Auth, rule string) web.MidFunc {
 				return errs.New(errs.Unauthenticated, err)
 			}
 
-			// auth := authclient.Authorize{
-			// 	Claims: GetClaims(ctx),
-			// 	UserID: userID,
-			// 	Rule:   rule,
-			// }
+			auth := authclient.Authorize{
+				Claims: GetClaims(ctx),
+				UserID: userID,
+				Rule:   rule,
+			}
 
-			// ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
-			// defer cancel()
+			ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+			defer cancel()
 
-			// if err := client.Authorize(ctx, auth); err != nil {
-			// 	return errs.New(errs.Unauthenticated, err)
-			// }
-
-			if err := a.Authorize(ctx, GetClaims(ctx), userID, rule); err != nil {
-				// return errs.Newf(errs.Unauthenticated, "authorize: you are not authorized for that action, claims[%v] rule[%v]: %s", auth.Claims.Roles, auth.Rule, err)
+			if err := client.Authorize(ctx, auth); err != nil {
 				return errs.New(errs.Unauthenticated, err)
 			}
 

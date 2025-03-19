@@ -13,10 +13,13 @@ import (
 	"time"
 
 	"github.com/ardanlabs/conf/v3"
-	"github.com/fernandobdaf/GoConcept_WebServer/api/services/sales/build/all"
-	"github.com/fernandobdaf/GoConcept_WebServer/app/sdk/authclient"
+	"github.com/fernandobdaf/GoConcept_WebServer/api/services/auth/build/all"
+	"github.com/fernandobdaf/GoConcept_WebServer/app/sdk/auth"
 	"github.com/fernandobdaf/GoConcept_WebServer/app/sdk/debug"
 	"github.com/fernandobdaf/GoConcept_WebServer/app/sdk/mux"
+
+	// "github.com/fernandobdaf/GoConcept_WebServer/business/sdk/sqldb"
+	"github.com/fernandobdaf/GoConcept_WebServer/foundation/keystore"
 	"github.com/fernandobdaf/GoConcept_WebServer/foundation/logger"
 	"github.com/fernandobdaf/GoConcept_WebServer/foundation/otel"
 )
@@ -36,7 +39,7 @@ func main() {
 		return otel.GetTraceID(ctx)
 	}
 
-	log = logger.NewWithEvents(os.Stdout, logger.LevelInfo, "SALES", traceIDFn, events)
+	log = logger.NewWithEvents(os.Stdout, logger.LevelInfo, "AUTH", traceIDFn, events)
 
 	// -------------------------------------------------------------------------
 
@@ -49,6 +52,7 @@ func main() {
 }
 
 func run(ctx context.Context, log *logger.Logger) error {
+
 	// -------------------------------------------------------------------------
 	// GOMAXPROCS
 
@@ -64,32 +68,38 @@ func run(ctx context.Context, log *logger.Logger) error {
 			WriteTimeout       time.Duration `conf:"default:10s"`
 			IdleTimeout        time.Duration `conf:"default:120s"`
 			ShutdownTimeout    time.Duration `conf:"default:20s"`
-			APIHost            string        `conf:"default:0.0.0.0:3000"`
-			DebugHost          string        `conf:"default:0.0.0.0:3010"`
+			APIHost            string        `conf:"default:0.0.0.0:6000"`
+			DebugHost          string        `conf:"default:0.0.0.0:6010"`
 			CORSAllowedOrigins []string      `conf:"default:*"`
-			// CORSAllowedOrigins []string      `conf:"default:*, noprint"` noprint avoids this to be printed
-			// CORSAllowedOrigins []string      `conf:"default:*, mask"` prints the value as "********"
 		}
-		// move to auth service
 		Auth struct {
-			Host string `conf:"default:http://auth-service:6000"`
+			KeysEnvVar string
+			KeysFolder string `conf:"default:zarf/keys/"`
+			ActiveKID  string `conf:"default:54bb2165-71e1-41a6-af3e-7da4a0e1e2c1"`
+			Issuer     string `conf:"default:service project"`
 		}
+		// DB struct {
+		// 	User         string `conf:"default:postgres"`
+		// 	Password     string `conf:"default:postgres,mask"`
+		// 	Host         string `conf:"default:database-service"`
+		// 	Name         string `conf:"default:postgres"`
+		// 	MaxIdleConns int    `conf:"default:0"`
+		// 	MaxOpenConns int    `conf:"default:0"`
+		// 	DisableTLS   bool   `conf:"default:true"`
+		// }
 		Tempo struct {
 			Host        string  `conf:"default:tempo:4317"`
-			ServiceName string  `conf:"default:sales"`
+			ServiceName string  `conf:"default:auth"`
 			Probability float64 `conf:"default:0.05"`
-			// Shouldn't use a high Probability value in non-developer systems.
-			// 0.05 should be enough for most systems. Some might want to have
-			// this even lower.
 		}
 	}{
 		Version: conf.Version{
 			Build: build,
-			Desc:  "Sales",
+			Desc:  "Auth",
 		},
 	}
 
-	const prefix = "SALES"
+	const prefix = "AUTH"
 	help, err := conf.Parse(prefix, &cfg)
 	if err != nil {
 		if errors.Is(err, conf.ErrHelpWanted) {
@@ -116,11 +126,62 @@ func run(ctx context.Context, log *logger.Logger) error {
 	expvar.NewString("build").Set(cfg.Build)
 
 	// -------------------------------------------------------------------------
+	// Database Support
+
+	// log.Info(ctx, "startup", "status", "initializing database support", "hostport", cfg.DB.Host)
+
+	// db, err := sqldb.Open(sqldb.Config{
+	// 	User:         cfg.DB.User,
+	// 	Password:     cfg.DB.Password,
+	// 	Host:         cfg.DB.Host,
+	// 	Name:         cfg.DB.Name,
+	// 	MaxIdleConns: cfg.DB.MaxIdleConns,
+	// 	MaxOpenConns: cfg.DB.MaxOpenConns,
+	// 	DisableTLS:   cfg.DB.DisableTLS,
+	// })
+	// if err != nil {
+	// 	return fmt.Errorf("connecting to db: %w", err)
+	// }
+
+	// defer db.Close()
+
+	// -------------------------------------------------------------------------
 	// Initialize authentication support
 
 	log.Info(ctx, "startup", "status", "initializing authentication support")
 
-	authClient := authclient.New(log, cfg.Auth.Host)
+	// Check the enviornment first to see if a key is being provided. Then
+	// load any private keys files from disk. We can assume some system like
+	// Vault has created these files already. How that happens is not our
+	// concern.
+
+	ks := keystore.New()
+
+	n1, err := ks.LoadByJSON(cfg.Auth.KeysEnvVar)
+	if err != nil {
+		return fmt.Errorf("loading keys by env: %w", err)
+	}
+
+	n2, err := ks.LoadByFileSystem(os.DirFS(cfg.Auth.KeysFolder))
+	if err != nil {
+		return fmt.Errorf("loading keys by fs: %w", err)
+	}
+
+	if n1+n2 == 0 {
+		return fmt.Errorf("no keys exist: %w", err)
+	}
+
+	authCfg := auth.Config{
+		Log:       log,
+		// DB:        db,
+		KeyLookup: ks,
+		Issuer:    cfg.Auth.Issuer,
+	}
+
+	ath, err := auth.New(authCfg)
+	if err != nil {
+		return fmt.Errorf("constructing auth: %w", err)
+	}
 
 	// -------------------------------------------------------------------------
 	// Start Tracing Support
@@ -148,7 +209,7 @@ func run(ctx context.Context, log *logger.Logger) error {
 	// Start Debug Service
 
 	go func() {
-		log.Info(ctx, "startup", "status", "debug v1 router started", "host", cfg.Web.DebugHost) // With this, we can access the debug service at http://localhost:3010/debug/pprof
+		log.Info(ctx, "startup", "status", "debug v1 router started", "host", cfg.Web.DebugHost)
 
 		if err := http.ListenAndServe(cfg.Web.DebugHost, debug.Mux()); err != nil {
 			log.Error(ctx, "shutdown", "status", "debug v1 router closed", "host", cfg.Web.DebugHost, "msg", err)
@@ -164,24 +225,18 @@ func run(ctx context.Context, log *logger.Logger) error {
 	signal.Notify(shutdown, syscall.SIGINT, syscall.SIGTERM)
 
 	cfgMux := mux.Config{
-		Build: build,
-		Log:   log,
+		Build:  build,
+		Log:    log,
 		// DB:     db,
 		Tracer: tracer,
-		SalesConfig: mux.SalesConfig{
-			AuthClient: authClient,
+		AuthConfig: mux.AuthConfig{
+			Auth: ath,
 		},
 	}
 
-	webAPI := mux.WebAPI(cfgMux, all.Routes())
-	// buildRoutes(),
-	// mux.WithCORS(cfg.Web.CORSAllowedOrigins),
-	// mux.WithFileServer(false, static, "static", "/"),
-	// )
-
 	api := http.Server{
 		Addr:         cfg.Web.APIHost,
-		Handler:      webAPI,
+		Handler:      mux.WebAPI(cfgMux, all.Routes(), mux.WithCORS(cfg.Web.CORSAllowedOrigins)),
 		ReadTimeout:  cfg.Web.ReadTimeout,
 		WriteTimeout: cfg.Web.WriteTimeout,
 		IdleTimeout:  cfg.Web.IdleTimeout,

@@ -6,27 +6,31 @@ import (
 	"context"
 	"math/rand"
 	"net/http"
+	"os"
+	"runtime"
+	"time"
 
 	"github.com/fernandobdaf/GoConcept_WebServer/app/sdk/errs"
 	"github.com/fernandobdaf/GoConcept_WebServer/foundation/web"
+
 	// "github.com/fernandobdaf/GoConcept_WebServer/app/sdk/errs"
 	// "github.com/fernandobdaf/GoConcept_WebServer/business/sdk/sqldb"
-	// "github.com/fernandobdaf/GoConcept_WebServer/foundation/logger"
+	"github.com/fernandobdaf/GoConcept_WebServer/foundation/logger"
 	// "github.com/jmoiron/sqlx"
 	// "github.com/fernandobdaf/GoConcept_WebServer/foundation/web"
 	// "github.com/jmoiron/sqlx"
 )
 
 type app struct {
-	// build string
-	// log   *logger.Logger
+	build string
+	log   *logger.Logger
 	// db    *sqlx.DB
 }
 
-func newApp() *app {
+func newApp(build string, log *logger.Logger) *app {
 	return &app{
-		// build: build,
-		// log:   log,
+		build: build,
+		log:   log,
 		// db:    db,
 	}
 }
@@ -35,8 +39,8 @@ func newApp() *app {
 // Do not respond by just returning an error because further up in the call
 // stack it will interpret that as a non-trusted error.
 func (a *app) readiness(ctx context.Context, r *http.Request) web.Encoder {
-	// ctx, cancel := context.WithTimeout(ctx, time.Second)
-	// defer cancel()
+	ctx, cancel := context.WithTimeout(ctx, time.Second)
+	defer cancel()
 
 	// if err := sqldb.StatusCheck(ctx, a.db); err != nil {
 	// 	a.log.Info(ctx, "readiness failure", "ERROR", err)
@@ -47,7 +51,6 @@ func (a *app) readiness(ctx context.Context, r *http.Request) web.Encoder {
 	status := Info{
 		Status: "OK",
 	}
-	// return json.NewEncoder(w).Encode(status)
 
 	return status
 }
@@ -57,30 +60,30 @@ func (a *app) readiness(ctx context.Context, r *http.Request) web.Encoder {
 // namespace details via the Downward API. The Kubernetes environment variables
 // need to be set within your Pod/Deployment manifest.
 func (a *app) liveness(ctx context.Context, r *http.Request) web.Encoder {
-	// host, err := os.Hostname()
-	// if err != nil {
-	// 	host = "unavailable"
-	// }
-
-	// info := Info{
-	// 	Status:     "up",
-	// 	Build:      a.build,
-	// 	Host:       host,
-	// 	Name:       os.Getenv("KUBERNETES_NAME"),
-	// 	PodIP:      os.Getenv("KUBERNETES_POD_IP"),
-	// 	Node:       os.Getenv("KUBERNETES_NODE_NAME"),
-	// 	Namespace:  os.Getenv("KUBERNETES_NAMESPACE"),
-	// 	GOMAXPROCS: runtime.GOMAXPROCS(0),
-	// }
-
-	// // This handler provides a free timer loop.
-
-	// return info
-	status := Info{
-		Status: "OK",
+	host, err := os.Hostname()
+	if err != nil {
+		host = "unavailable"
 	}
 
-	return status
+	info := Info{
+		Status:     "up",
+		Build:      a.build,
+		Host:       host,
+		Name:       os.Getenv("KUBERNETES_NAME"),
+		PodIP:      os.Getenv("KUBERNETES_POD_IP"),
+		Node:       os.Getenv("KUBERNETES_NODE_NAME"),
+		Namespace:  os.Getenv("KUBERNETES_NAMESPACE"),
+		GOMAXPROCS: runtime.GOMAXPROCS(0),
+	}
+
+	// This handler provides a free timer loop.
+
+	return info
+	// status := Info{
+	// 	Status: "OK",
+	// }
+
+	// return status
 }
 
 func (a *app) testError(ctx context.Context, r *http.Request) web.Encoder {
@@ -100,6 +103,15 @@ func (a *app) testPanic(ctx context.Context, r *http.Request) web.Encoder {
 		panic("THIS IS A PANIC TEST!!!")
 	}
 
+	status := Info{
+		Status: "OK",
+	}
+
+	return status
+}
+
+func (a *app) testAuth(ctx context.Context, r *http.Request) web.Encoder {
+	
 	status := Info{
 		Status: "OK",
 	}

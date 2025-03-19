@@ -2,14 +2,14 @@ package mid
 
 import (
 	"context"
-	"encoding/base64"
+	// "encoding/base64"
 	"net/http"
 	// "net/mail"
-	"strings"
-	// "time"
+	// "strings"
+	"time"
 
 	"github.com/fernandobdaf/GoConcept_WebServer/app/sdk/auth"
-	// "github.com/fernandobdaf/GoConcept_WebServer/app/sdk/authclient"
+	"github.com/fernandobdaf/GoConcept_WebServer/app/sdk/authclient"
 	"github.com/fernandobdaf/GoConcept_WebServer/app/sdk/errs"
 	// "github.com/fernandobdaf/GoConcept_WebServer/business/domain/userbus"
 	// "github.com/fernandobdaf/GoConcept_WebServer/business/types/role"
@@ -20,28 +20,28 @@ import (
 
 // Authenticate is a middleware function that integrates with an authentication client
 // to validate user credentials and attach user data to the request context.
-// func Authenticate(client *authclient.Client) web.MidFunc {
-// 	m := func(next web.HandlerFunc) web.HandlerFunc {
-// 		h := func(ctx context.Context, r *http.Request) web.Encoder {
-// 			ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
-// 			defer cancel()
+func Authenticate(client *authclient.Client) web.MidFunc {
+	m := func(next web.HandlerFunc) web.HandlerFunc {
+		h := func(ctx context.Context, r *http.Request) web.Encoder {
+			ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+			defer cancel()
 
-// 			resp, err := client.Authenticate(ctx, r.Header.Get("authorization"))
-// 			if err != nil {
-// 				return errs.New(errs.Unauthenticated, err)
-// 			}
+			resp, err := client.Authenticate(ctx, r.Header.Get("authorization"))
+			if err != nil {
+				return errs.New(errs.Unauthenticated, err)
+			}
 
-// 			ctx = setUserID(ctx, resp.UserID)
-// 			ctx = setClaims(ctx, resp.Claims)
+			ctx = setUserID(ctx, resp.UserID)
+			ctx = setClaims(ctx, resp.Claims)
 
-// 			return next(ctx, r)
-// 		}
+			return next(ctx, r)
+		}
 
-// 		return h
-// 	}
+		return h
+	}
 
-// 	return m
-// }
+	return m
+}
 
 // Bearer processes JWT authentication logic.
 func Bearer(ath *auth.Auth) web.MidFunc {
@@ -119,21 +119,21 @@ func Bearer(ath *auth.Auth) web.MidFunc {
 // 	return m
 // }
 
-func parseBasicAuth(auth string) (string, string, bool) {
-	parts := strings.Split(auth, " ")
-	if len(parts) != 2 || parts[0] != "Basic" {
-		return "", "", false
-	}
+// func parseBasicAuth(auth string) (string, string, bool) {
+// 	parts := strings.Split(auth, " ")
+// 	if len(parts) != 2 || parts[0] != "Basic" {
+// 		return "", "", false
+// 	}
 
-	c, err := base64.StdEncoding.DecodeString(parts[1])
-	if err != nil {
-		return "", "", false
-	}
+// 	c, err := base64.StdEncoding.DecodeString(parts[1])
+// 	if err != nil {
+// 		return "", "", false
+// 	}
 
-	username, password, ok := strings.Cut(string(c), ":")
-	if !ok {
-		return "", "", false
-	}
+// 	username, password, ok := strings.Cut(string(c), ":")
+// 	if !ok {
+// 		return "", "", false
+// 	}
 
-	return username, password, true
-}
+// 	return username, password, true
+// }

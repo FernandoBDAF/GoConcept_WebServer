@@ -3,8 +3,11 @@ package web
 
 import (
 	"context"
+	// "embed"
 	"fmt"
+	// "io/fs"
 	"net/http"
+	// "regexp"
 
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"go.opentelemetry.io/otel"
@@ -17,21 +20,6 @@ import (
 type Encoder interface {
 	Encode() (data []byte, contentType string, err error)
 }
-
-// type MockEncoder struct {
-// 	Data        any
-// 	ContentType string
-// 	Err         error
-// }
-
-// func (e *MockEncoder) Encode() (data []byte, contentType string, err error) {
-// 	data, err = json.Marshal(e.Data)
-// 	if err != nil {
-// 		return nil, "", err
-// 	}
-
-// 	return data, e.ContentType, e.Err
-// }
 
 // HandlerFunc represents a function that handles a http request within our own
 // little mini framework.
@@ -50,7 +38,7 @@ type App struct {
 	mux    *http.ServeMux
 	otmux   http.Handler
 	mw []MidFunc
-	// origins []string
+	origins []string
 }
 
 // NewApp creates an App value that handle a set of routes for the application.
@@ -79,6 +67,51 @@ func NewApp(log Logger, tracer trace.Tracer, mw ...MidFunc) *App {
 // application traffic. This was set up in the NewApp function.
 func (a *App) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	a.otmux.ServeHTTP(w, r)
+}
+
+// EnableCORS enables CORS preflight requests to work in the middleware. It
+// prevents the MethodNotAllowedHandler from being called. This must be enabled
+// for the CORS middleware to work.
+func (a *App) EnableCORS(origins []string) {
+	a.origins = origins
+
+	handler := func(ctx context.Context, r *http.Request) Encoder {
+		return nil
+	}
+	handler = wrapMiddleware([]MidFunc{a.corsHandler}, handler)
+
+	a.HandlerFuncNoMid(http.MethodOptions, "", "/", handler)
+}
+
+func (a *App) corsHandler(webHandler HandlerFunc) HandlerFunc {
+	h := func(ctx context.Context, r *http.Request) Encoder {
+		w := GetWriter(ctx)
+
+		// https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Access-Control-Allow-Origin
+		// https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Origin
+		//
+		// Limiting the possible Access-Control-Allow-Origin values to a set of
+		// allowed origins requires code on the server side to check the value of
+		// the Origin request header, compare that to a list of allowed origins, and
+		// then if the Origin value is in the list, set the
+		// Access-Control-Allow-Origin value to the same value as the Origin.
+
+		reqOrigin := r.Header.Get("Origin")
+		for _, origin := range a.origins {
+			if origin == "*" || origin == reqOrigin {
+				w.Header().Set("Access-Control-Allow-Origin", origin)
+				break
+			}
+		}
+
+		w.Header().Set("Access-Control-Allow-Methods", "POST, PATCH, GET, OPTIONS, PUT, DELETE")
+		w.Header().Set("Access-Control-Allow-Headers", "Accept, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization")
+		w.Header().Set("Access-Control-Max-Age", "86400")
+
+		return webHandler(ctx, r)
+	}
+
+	return h
 }
 
 // HandlerFuncNoMid sets a handler function for a given HTTP method and path
@@ -135,7 +168,86 @@ func (a *App) HandlerFunc(method string, group string, path string, handlerFunc 
 	}
 	finalPath = fmt.Sprintf("%s %s", method, finalPath)
 
-	fmt.Println("finalPath", finalPath)
-
 	a.mux.HandleFunc(finalPath, h)
 }
+
+// // RawHandlerFunc sets a raw handler function for a given HTTP method and path
+// // pair to the application server mux.
+// func (a *App) RawHandlerFunc(method string, group string, path string, rawHandlerFunc http.HandlerFunc, mw ...MidFunc) {
+// 	handlerFunc := func(ctx context.Context, r *http.Request) Encoder {
+// 		r = r.WithContext(ctx)
+// 		rawHandlerFunc(GetWriter(ctx), r)
+// 		return nil
+// 	}
+
+// 	handlerFunc = wrapMiddleware(mw, handlerFunc)
+// 	handlerFunc = wrapMiddleware(a.mw, handlerFunc)
+
+// 	if a.origins != nil {
+// 		handlerFunc = wrapMiddleware([]MidFunc{a.corsHandler}, handlerFunc)
+// 	}
+
+// 	h := func(w http.ResponseWriter, r *http.Request) {
+// 		ctx := setTracer(r.Context(), a.tracer)
+// 		ctx = setWriter(ctx, w)
+
+// 		otel.GetTextMapPropagator().Inject(ctx, propagation.HeaderCarrier(w.Header()))
+
+// 		handlerFunc(ctx, r)
+// 	}
+
+// 	finalPath := path
+// 	if group != "" {
+// 		finalPath = "/" + group + path
+// 	}
+// 	finalPath = fmt.Sprintf("%s %s", method, finalPath)
+
+// 	a.mux.HandleFunc(finalPath, h)
+// }
+
+// // FileServerReact starts a file server based on the specified file system and
+// // directory inside that file system for a statically built react webapp.
+// func (a *App) FileServerReact(static embed.FS, dir string, path string) error {
+// 	fileMatcher := regexp.MustCompile(`\.[a-zA-Z]*$`)
+
+// 	fSys, err := fs.Sub(static, dir)
+// 	if err != nil {
+// 		return fmt.Errorf("switching to static folder: %w", err)
+// 	}
+
+// 	fileServer := http.StripPrefix(path, http.FileServer(http.FS(fSys)))
+
+// 	h := func(w http.ResponseWriter, r *http.Request) {
+// 		if !fileMatcher.MatchString(r.URL.Path) {
+// 			p, err := static.ReadFile(fmt.Sprintf("%s/index.html", dir))
+// 			if err != nil {
+// 				a.log(context.Background(), "FileServerReact", "ERROR", err)
+// 				return
+// 			}
+
+// 			w.Write(p)
+// 			return
+// 		}
+
+// 		fileServer.ServeHTTP(w, r)
+// 	}
+
+// 	a.mux.HandleFunc(fmt.Sprintf("GET %s", path), h)
+
+// 	return nil
+// }
+
+// // FileServer starts a file server based on the specified file system and
+// // directory inside that file system.
+// func (a *App) FileServer(static embed.FS, dir string, path string) error {
+// 	fSys, err := fs.Sub(static, dir)
+// 	if err != nil {
+// 		return fmt.Errorf("switching to static folder: %w", err)
+// 	}
+
+// 	fileServer := http.StripPrefix(path, http.FileServer(http.FS(fSys)))
+
+// 	a.mux.Handle(fmt.Sprintf("GET %s", path), fileServer)
+
+// 	return nil
+// }
