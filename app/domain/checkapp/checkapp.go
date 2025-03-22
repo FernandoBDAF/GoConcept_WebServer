@@ -2,36 +2,30 @@
 package checkapp
 
 import (
-	// "context"
 	"context"
-	"math/rand"
 	"net/http"
 	"os"
 	"runtime"
 	"time"
 
 	"github.com/fernandobdaf/GoConcept_WebServer/app/sdk/errs"
-	"github.com/fernandobdaf/GoConcept_WebServer/foundation/web"
-
-	// "github.com/fernandobdaf/GoConcept_WebServer/app/sdk/errs"
-	// "github.com/fernandobdaf/GoConcept_WebServer/business/sdk/sqldb"
+	"github.com/fernandobdaf/GoConcept_WebServer/business/types/role/sdk/sqldb"
 	"github.com/fernandobdaf/GoConcept_WebServer/foundation/logger"
-	// "github.com/jmoiron/sqlx"
-	// "github.com/fernandobdaf/GoConcept_WebServer/foundation/web"
-	// "github.com/jmoiron/sqlx"
+	"github.com/fernandobdaf/GoConcept_WebServer/foundation/web"
+	"github.com/jmoiron/sqlx"
 )
 
 type app struct {
 	build string
 	log   *logger.Logger
-	// db    *sqlx.DB
+	db    *sqlx.DB
 }
 
-func newApp(build string, log *logger.Logger) *app {
+func newApp(build string, log *logger.Logger, db *sqlx.DB) *app {
 	return &app{
 		build: build,
 		log:   log,
-		// db:    db,
+		db:    db,
 	}
 }
 
@@ -42,17 +36,12 @@ func (a *app) readiness(ctx context.Context, r *http.Request) web.Encoder {
 	ctx, cancel := context.WithTimeout(ctx, time.Second)
 	defer cancel()
 
-	// if err := sqldb.StatusCheck(ctx, a.db); err != nil {
-	// 	a.log.Info(ctx, "readiness failure", "ERROR", err)
-	// 	return errs.New(errs.Internal, err)
-	// }
-
-	// return nil
-	status := Info{
-		Status: "OK",
+	if err := sqldb.StatusCheck(ctx, a.db); err != nil {
+		a.log.Info(ctx, "readiness failure", "ERROR", err)
+		return errs.New(errs.Internal, err)
 	}
 
-	return status
+	return nil
 }
 
 // liveness returns simple status info if the service is alive. If the
@@ -79,42 +68,4 @@ func (a *app) liveness(ctx context.Context, r *http.Request) web.Encoder {
 	// This handler provides a free timer loop.
 
 	return info
-	// status := Info{
-	// 	Status: "OK",
-	// }
-
-	// return status
-}
-
-func (a *app) testError(ctx context.Context, r *http.Request) web.Encoder {
-	if n := rand.Intn(10); n%2 == 0 {
-		return errs.Newf(errs.FailedPrecondition, "test error")
-	}
-
-	status := Info{
-		Status: "OK",
-	}
-
-	return status
-}
-
-func (a *app) testPanic(ctx context.Context, r *http.Request) web.Encoder {
-	if n := rand.Intn(10); n%2 == 0 {
-		panic("THIS IS A PANIC TEST!!!")
-	}
-
-	status := Info{
-		Status: "OK",
-	}
-
-	return status
-}
-
-func (a *app) testAuth(ctx context.Context, r *http.Request) web.Encoder {
-	
-	status := Info{
-		Status: "OK",
-	}
-
-	return status
 }

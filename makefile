@@ -138,7 +138,7 @@ dev-load-db:
 dev-apply:
 	kustomize build zarf/k8s/dev/database | kubectl apply -f -
 	kubectl rollout status --namespace=$(NAMESPACE) --watch --timeout=120s sts/database
-	
+
 	kustomize build zarf/k8s/dev/auth | kubectl apply -f -
 	kubectl wait pods --namespace=$(NAMESPACE) --selector app=$(AUTH_APP) --timeout=120s --for=condition=Ready
 
@@ -162,6 +162,8 @@ dev-logs-auth:
 	kubectl logs --namespace=$(NAMESPACE) -l app=$(AUTH_APP) --all-containers=true -f --tail=100 | go run api/tooling/logfmt/main.go
 
 # ------------------------------------------------------------------------------
+dev-logs-init:
+	kubectl logs --namespace=$(NAMESPACE) -l app=$(SALES_APP) -f --tail=100 -c init-migrate-seed
 
 dev-describe-deployment:
 	kubectl describe deployment --namespace=$(NAMESPACE) $(SALES_APP)
@@ -171,6 +173,18 @@ dev-describe-sales:
 
 dev-describe-auth:
 	kubectl describe pod --namespace=$(NAMESPACE) -l app=$(AUTH_APP)
+
+# ==============================================================================
+# Administration
+
+migrate:
+	export SALES_DB_HOST=localhost; go run api/tooling/admin/main.go migrate
+
+seed: migrate
+	export SALES_DB_HOST=localhost; go run api/tooling/admin/main.go seed
+
+pgcli:
+	pgcli postgresql://postgres:postgres@localhost
 
 # ==============================================================================
 # Metrics and Tracing

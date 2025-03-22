@@ -11,6 +11,7 @@ import (
 	"github.com/fernandobdaf/GoConcept_WebServer/app/sdk/mid"
 	"github.com/fernandobdaf/GoConcept_WebServer/foundation/logger"
 	"github.com/fernandobdaf/GoConcept_WebServer/foundation/web"
+	"github.com/jmoiron/sqlx"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -46,9 +47,9 @@ type AuthConfig struct {
 
 // Config contains all the mandatory systems required by handlers.
 type Config struct {
-	Build string
-	Log   *logger.Logger
-	// DB     *sqlx.DB
+	Build  string
+	Log    *logger.Logger
+	DB     *sqlx.DB
 	Tracer trace.Tracer
 	SalesConfig
 	AuthConfig

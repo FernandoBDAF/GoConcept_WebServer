@@ -14,6 +14,10 @@ ARG BUILD_REF
 # Copy the source code into the container.
 COPY . /service
 
+# Build the admin binary.
+WORKDIR /service/api/tooling/admin
+RUN go build -ldflags "-X main.build=${BUILD_REF}"
+
 # Build the service binary.
 WORKDIR /service/api/services/sales
 RUN go build -ldflags "-X main.build=${BUILD_REF}"
@@ -24,8 +28,7 @@ ARG BUILD_DATE
 ARG BUILD_REF
 RUN addgroup -g 1000 -S sales && \
     adduser -u 1000 -h /service -G sales -S sales
-# remove this when move to auth service
-COPY --from=build_sales --chown=sales:sales /service/zarf/keys/. /service/zarf/keys/.
+COPY --from=build_sales --chown=sales:sales /service/api/tooling/admin/admin /service/admin
 COPY --from=build_sales --chown=sales:sales /service/api/services/sales/sales /service/sales
 WORKDIR /service
 USER sales

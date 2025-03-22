@@ -45,8 +45,7 @@ func (add) Add(app *web.App, cfg mux.Config) {
 	checkapp.Routes(app, checkapp.Config{
 		Build: cfg.Build,
 		Log:   cfg.Log,
-		// DB:    cfg.DB,
-		AuthClient: cfg.AuthClient,
+		DB:    cfg.DB,
 	})
 
 	// homeapp.Routes(app, homeapp.Config{

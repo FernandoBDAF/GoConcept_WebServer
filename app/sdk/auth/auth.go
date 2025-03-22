@@ -16,7 +16,7 @@ import (
 	"github.com/fernandobdaf/GoConcept_WebServer/foundation/logger"
 	"github.com/golang-jwt/jwt/v4"
 	"github.com/google/uuid"
-	// "github.com/jmoiron/sqlx"
+	"github.com/jmoiron/sqlx"
 	"github.com/open-policy-agent/opa/v1/rego"
 )
 
@@ -40,7 +40,7 @@ type KeyLookup interface {
 // Config represents information required to initialize auth.
 type Config struct {
 	Log       *logger.Logger
-	// DB        *sqlx.DB
+	DB        *sqlx.DB
 	KeyLookup KeyLookup
 	Issuer    string
 }

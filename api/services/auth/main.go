@@ -17,8 +17,7 @@ import (
 	"github.com/fernandobdaf/GoConcept_WebServer/app/sdk/auth"
 	"github.com/fernandobdaf/GoConcept_WebServer/app/sdk/debug"
 	"github.com/fernandobdaf/GoConcept_WebServer/app/sdk/mux"
-
-	// "github.com/fernandobdaf/GoConcept_WebServer/business/sdk/sqldb"
+	"github.com/fernandobdaf/GoConcept_WebServer/business/types/role/sdk/sqldb"
 	"github.com/fernandobdaf/GoConcept_WebServer/foundation/keystore"
 	"github.com/fernandobdaf/GoConcept_WebServer/foundation/logger"
 	"github.com/fernandobdaf/GoConcept_WebServer/foundation/otel"
@@ -78,15 +77,15 @@ func run(ctx context.Context, log *logger.Logger) error {
 			ActiveKID  string `conf:"default:54bb2165-71e1-41a6-af3e-7da4a0e1e2c1"`
 			Issuer     string `conf:"default:service project"`
 		}
-		// DB struct {
-		// 	User         string `conf:"default:postgres"`
-		// 	Password     string `conf:"default:postgres,mask"`
-		// 	Host         string `conf:"default:database-service"`
-		// 	Name         string `conf:"default:postgres"`
-		// 	MaxIdleConns int    `conf:"default:0"`
-		// 	MaxOpenConns int    `conf:"default:0"`
-		// 	DisableTLS   bool   `conf:"default:true"`
-		// }
+		DB struct {
+			User         string `conf:"default:postgres"`
+			Password     string `conf:"default:postgres,mask"`
+			Host         string `conf:"default:database-service"`
+			Name         string `conf:"default:postgres"`
+			MaxIdleConns int    `conf:"default:0"`
+			MaxOpenConns int    `conf:"default:0"`
+			DisableTLS   bool   `conf:"default:true"`
+		}
 		Tempo struct {
 			Host        string  `conf:"default:tempo:4317"`
 			ServiceName string  `conf:"default:auth"`
@@ -128,22 +127,22 @@ func run(ctx context.Context, log *logger.Logger) error {
 	// -------------------------------------------------------------------------
 	// Database Support
 
-	// log.Info(ctx, "startup", "status", "initializing database support", "hostport", cfg.DB.Host)
+	log.Info(ctx, "startup", "status", "initializing database support", "hostport", cfg.DB.Host)
 
-	// db, err := sqldb.Open(sqldb.Config{
-	// 	User:         cfg.DB.User,
-	// 	Password:     cfg.DB.Password,
-	// 	Host:         cfg.DB.Host,
-	// 	Name:         cfg.DB.Name,
-	// 	MaxIdleConns: cfg.DB.MaxIdleConns,
-	// 	MaxOpenConns: cfg.DB.MaxOpenConns,
-	// 	DisableTLS:   cfg.DB.DisableTLS,
-	// })
-	// if err != nil {
-	// 	return fmt.Errorf("connecting to db: %w", err)
-	// }
+	db, err := sqldb.Open(sqldb.Config{
+		User:         cfg.DB.User,
+		Password:     cfg.DB.Password,
+		Host:         cfg.DB.Host,
+		Name:         cfg.DB.Name,
+		MaxIdleConns: cfg.DB.MaxIdleConns,
+		MaxOpenConns: cfg.DB.MaxOpenConns,
+		DisableTLS:   cfg.DB.DisableTLS,
+	})
+	if err != nil {
+		return fmt.Errorf("connecting to db: %w", err)
+	}
 
-	// defer db.Close()
+	defer db.Close()
 
 	// -------------------------------------------------------------------------
 	// Initialize authentication support
@@ -164,7 +163,7 @@ func run(ctx context.Context, log *logger.Logger) error {
 
 	n2, err := ks.LoadByFileSystem(os.DirFS(cfg.Auth.KeysFolder))
 	if err != nil {
-		return fmt.Errorf("loading keys by fs: %w", err)
+		return fmt.Errorf("loading keys by fs: %w, keysFolder: %v", err, cfg.Auth.KeysFolder)
 	}
 
 	if n1+n2 == 0 {
@@ -173,7 +172,7 @@ func run(ctx context.Context, log *logger.Logger) error {
 
 	authCfg := auth.Config{
 		Log:       log,
-		// DB:        db,
+		DB:        db,
 		KeyLookup: ks,
 		Issuer:    cfg.Auth.Issuer,
 	}
@@ -225,9 +224,9 @@ func run(ctx context.Context, log *logger.Logger) error {
 	signal.Notify(shutdown, syscall.SIGINT, syscall.SIGTERM)
 
 	cfgMux := mux.Config{
-		Build:  build,
-		Log:    log,
-		// DB:     db,
+		Build: build,
+		Log:   log,
+		DB:     db,
 		Tracer: tracer,
 		AuthConfig: mux.AuthConfig{
 			Auth: ath,
